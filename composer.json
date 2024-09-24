@@ -2,7 +2,7 @@
     "name": "paske/lumav-crawler",
     "autoload": {
         "psr-4": {
-            "Paske\\LumavCrawler\\": "src/"
+            "App\\": "src/"
         }
     },
     "authors": [
