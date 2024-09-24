@@ -1,0 +1,19 @@
+{
+    "name": "paske/lumav-crawler",
+    "autoload": {
+        "psr-4": {
+            "Paske\\LumavCrawler\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Vladislav Paškevitš",
+            "email": "42935979+Vladislp@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "guzzlehttp/guzzle": "^7.9",
+        "symfony/dom-crawler": "^7.1",
+        "symfony/css-selector": "^7.1"
+    }
+}
