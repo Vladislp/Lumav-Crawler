@@ -1,0 +1,10 @@
+{
+    "ebay": {
+        "category_selector": "li.vl-flyout-nav__js-tab a",
+        "subcategory_selector": ".vl-flyout-nav__flyout .vl-flyout-nav__sub-cats nav ul li a",
+        "product_selector": ".s-item",
+        "product_name_selector": ".s-item__title",
+        "product_price_selector": ".s-item__price",
+        "product_category_selector": ".s-item__category"
+    }
+}
