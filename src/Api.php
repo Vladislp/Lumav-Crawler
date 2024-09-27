@@ -56,14 +56,31 @@ class Api
                     $domCrawler = $crawler->parsePage($html);
                     $categories = $crawler->extractCategories($domCrawler);
                     $products = $crawler->extractProducts($domCrawler);
-                    $toolbar = $crawler->extractToolbar($domCrawler); 
+                    $bannerinfo = $crawler->extractBannerInfo($domCrawler);
 
-                    $results[] = [
-                        'url' => $url,
-                        'categories' => $categories,
-                        'products' => $products,
-                        'toolbar' => $toolbar,
-                    ];
+                    // Check if the URL is for AliExpress
+                    if (strpos($url, 'aliexpress.com') !== false) {
+                        $categories_ali = $crawler->extractCategoriesFromAliExpress($domCrawler);
+                        $products_ali = $crawler->extractProductsFromAliExpress($domCrawler);
+
+                        // Only include AliExpress-specific data for AliExpress URLs
+                        $results[] = [
+                            'url' => $url,
+                            'categories' => $categories,
+                            'products' => $products,
+                            'bannerInfo' => $bannerinfo,
+                            'categories' => $categories_ali,
+                            'products' => $products_ali,
+                        ];
+                    } else {
+                        // For non-AliExpress URLs, don't include the AliExpress section
+                        $results[] = [
+                            'url' => $url,
+                            'categories' => $categories,
+                            'products' => $products,
+                            'bannerInfo' => $bannerinfo,
+                        ];
+                    }
                 } else {
                     $results[] = [
                         'url' => $url,
@@ -78,4 +95,5 @@ class Api
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
+
 }

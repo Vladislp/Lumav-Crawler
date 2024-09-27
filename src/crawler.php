@@ -24,24 +24,75 @@ class Crawler
         return $crawler;
     }
 
+    public function extractBannerInfo(DomCrawler $crawler)
+    {
+        $bannerInfo = $crawler->filter('.vl-banner-color-block__content')->each(function (DomCrawler $node) {
+            $heading = $node->filter('.vl-banner__text-heading span')->text();
+            $subheading = $node->filter('.vl-banner__text-subheading span')->text();
+            $ctaUrl = $node->filter('.vl-cta a')->attr('href');
+            $ctaText = $node->filter('.vl-cta__text-only')->text();
+    
+            return [
+                'heading' => trim($heading),
+                'subheading' => trim($subheading),
+                'cta_url' => trim($ctaUrl),
+                'cta_text' => trim($ctaText),
+            ];
+        });
+    
+        // Convert the banner information array to JSON format
+        return $bannerInfo;
+    }
+
+    public function extractCategoriesFromAliExpress(DomCrawler $crawler)
+    {
+        $categories = $crawler->filter('.pc2023-header-tab--tab-item--2Hs_3sA')->each(function (DomCrawler $node) {
+            $categoryName = trim($node->text());
+            $categoryUrl = trim($node->attr('href'));
+
+            return [
+                'name' => $categoryName,
+                'url' => $categoryUrl,
+            ];
+        });
+
+        return $categories;
+    }
+
+    public function extractProductsFromAliExpress(DomCrawler $crawler)
+    {
+        $products = $crawler->filter('.new-user--itemWrap--23_AGec')->each(function (DomCrawler $node) {
+            $link = $node->attr('href');
+            $imageUrl = $node->filter('img')->attr('src');
+            $discount = $node->filter('.new-user--discount--2ptxNmf')->text();
+            $minPrice = $node->filter('.new-user--minPrice--27O2j3o')->text();
+            $originPrice = $node->filter('.new-user--originPrice--2y3Jdz7')->text();
+
+            return [
+                'link' => trim($link),
+                'image_url' => trim($imageUrl),
+                'discount' => trim($discount),
+                'min_price' => trim($minPrice),
+                'origin_price' => trim($originPrice),
+            ];
+        });
+
+        return $products;
+    }
+    
     public function extractCategories(DomCrawler $crawler)
     {
         $categories = $crawler->filter('li.vl-flyout-nav__js-tab')->each(function (DomCrawler $node) {
-            // Get the main category name
             $categoryName = trim($node->filter('a')->text());
-            // Get the main category URL
             $categoryUrl = trim($node->filter('a')->attr('href'));
     
-            // Initialize subcategories array
             $subCategories = [];
     
-            // Check if there are any subcategories present
             $subCategoryNodes = $node->filter('.vl-flyout-nav__flyout .vl-flyout-nav__sub-cats nav ul li a');
             $subCategoryNodes->each(function (DomCrawler $subNode) use (&$subCategories) {
                 $subCategoryName = trim($subNode->text());
                 $subCategoryUrl = trim($subNode->attr('href'));
     
-                // Add to the subcategories array
                 $subCategories[] = [
                     'name' => $subCategoryName,
                     'url' => $subCategoryUrl,
@@ -58,31 +109,13 @@ class Crawler
         return $categories;
     }
 
-    public function extractToolbar(DomCrawler $crawler)
-{
-    $toolbarItems = $crawler->filter('#gh-top ul#gh-topl li')->each(function (DomCrawler $node) {
-        $linkText = trim($node->filter('a')->text());
-        $linkUrl = trim($node->filter('a')->attr('href'));
-
-        return [
-            'text' => $linkText,
-            'url' => $linkUrl,
-        ];
-    });
-
-    return $toolbarItems;
-}
-    
-    
-
     public function extractProducts(DomCrawler $crawler)
     {
-        // Example selector, adjust based on the actual HTML structure of product items
-        $products = $crawler->filter('.item-class-selector')->each(function (DomCrawler $node) {
-            $name = $node->filter('.product-name-class-selector')->text(); // Adjust selector
-            $price = $node->filter('.product-price-class-selector')->text(); // Adjust selector
-            $category = $node->filter('.product-category-class-selector')->text(); // Adjust as needed
-
+        $products = $crawler->filter('.s-item')->each(function (DomCrawler $node) {
+            $name = $node->filter('.s-item__title')->text(); // Adjust selector for product name
+            $price = $node->filter('.s-item__price')->text(); // Adjust selector for product price
+            $category = ''; // eBay may not provide the category directly
+            
             return [
                 'name' => trim($name),
                 'price' => trim($price),
@@ -93,8 +126,6 @@ class Crawler
         return $products;
     }
 
-// Implement additional extraction methods as needed
-
     public function fetchPage($url)
     {
         try {
@@ -104,14 +135,12 @@ class Crawler
 
             return (string) $response->getBody();
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            // Log the request exception (e.g., 404, 500 errors)
             error_log("Request failed: " . $e->getMessage());
             return null;
         } catch (\Exception $e) {
-            // Log general exceptions
             error_log("An error occurred: " . $e->getMessage());
             return null;
         }
     }
-
 }
+
