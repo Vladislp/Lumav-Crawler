@@ -8,7 +8,7 @@ class Auth
     public function __construct()
     {
         // Ideally, store API keys securely, e.g., in environment variables
-        $this->apiKey = '12345';
+        $this->apiKey = '';
     }
     // Method to authenticate API requests
     public function isAuthenticated()
