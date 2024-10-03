@@ -35,10 +35,10 @@ class Api
                 echo json_encode(['error' => 'Invalid action']);
         }
     }
-
     private function handleCrawl()
     {
         try {
+            // Initialize the Crawler object to handle page requests and parsing
             $crawler = new Crawler();
 
             // Read URLs from the text file
@@ -49,11 +49,14 @@ class Api
             }
 
             $results = [];
-
+            // Loop through each URL and process it
             foreach ($urls as $url) {
+                // Fetch the HTML content of the page
                 $html = $crawler->fetchPage($url);
                 if ($html) {
+                    // Parse the HTML content using DomCrawler
                     $domCrawler = $crawler->parsePage($html);
+                    // Extract categories, products, and banner info from the parsed page
                     $categories = $crawler->extractCategories($domCrawler);
                     $products = $crawler->extractProducts($domCrawler);
                     $bannerinfo = $crawler->extractBannerInfo($domCrawler);

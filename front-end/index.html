@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Crawler Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <style>
+        #dashboard {
+            display: flex;
+            justify-content: space-between;
+        }
+        #results {
+            flex: 2;
+            padding-right: 20px;
+        }
+        #charts-container {
+            flex: 1;
+        }
+        canvas {
+            width: 100%;
+            height: 300px; /* Set a fixed height for better visualization */
+        }
+        .item {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>E-Commerce Crawler Dashboard</h1>
+    <div id="search-container">
+        <input type="text" id="api-key" placeholder="Enter API Key">
+        <button id="fetch-data" onclick="fetchData()">Fetch Data</button>
+    </div>
+
+    <div id="dashboard">
+        <div id="results"></div> <!-- Product results -->
+        <div id="charts-container">
+            <canvas id="categoryChart"></canvas> <!-- Pie chart for categories -->
+            <canvas id="priceRangeChart"></canvas> <!-- Bar chart for price distribution -->
+            <canvas id="discountChart"></canvas> <!-- Line chart for discounts -->
+            <canvas id="popularityChart"></canvas> <!-- Line/Scatter chart for popularity trends -->
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const apiKey = document.getElementById('api-key').value; // Get the API key from input
+            const url = `http://localhost:8000/?action=crawl&api_key=${apiKey}`; // Update to your API URL
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                displayData(data); // Call the function to display the data
+                updateCharts(data); // Update the charts with category, price, discount, and popularity data
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('results').innerHTML = '<p>Error fetching data. Please try again.</p>';
+            }
+        }
+
+        function displayData(data) {
+    const resultsContainer = document.getElementById('results');
+    resultsContainer.innerHTML = ''; // Clear previous results
+
+    if (data.status === 'success') {
+        data.data.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item';
+            
+            const categoriesList = item.categories && item.categories.length > 0 ?
+            item.categories.map(category => `<li>${category.name}</li>`).join('') :
+            'No categories found';
+            const productsList = item.products && item.products.length > 0 ? 
+            item.products.map(product => `<li>${product.name ? product.name : 'Unnamed product'} - Base Price: $${product.base_price || 'N/A'}</li>`).join('') : 
+            'No products found';
+
+            itemDiv.innerHTML = `
+                <h3>URL: ${item.url}</h3>
+                <h4>Categories:</h4>
+                <ul>${categoriesList}</ul>
+                <h4>Products:</h4>
+                <ul>${productsList}</ul>
+                <p>Banner Info: ${item.bannerInfo ? item.bannerInfo : 'N/A'}</p>
+            `;
+            resultsContainer.appendChild(itemDiv);
+        });
+    } else {
+        resultsContainer.innerHTML = `<p>${data.message}</p>`;
+    }
+}
+
+
+        function updateCharts(data) {
+            const categoryCount = {};
+            const priceRanges = {
+                'Under $10': 0,
+                '$10 - $50': 0,
+                '$50 - $100': 0,
+                '$100 - $500': 0,
+                'Over $500': 0
+            };
+            const discountData = {};
+            const popularityData = {};
+
+            // Loop through the data and count the occurrences of each category, price range, discounts, and popularity
+            data.data.forEach(item => {
+                if (item.categories && item.categories.length > 0) {
+                    item.categories.forEach(category => {
+                        categoryCount[category.name] = (categoryCount[category.name] || 0) + 1;
+                    });
+                }
+
+                if (item.products && item.products.length > 0) {
+                    item.products.forEach(product => {
+                        // Process price ranges
+                        const price = parseFloat(product.min_price.replace('$', '')); // Extract numeric values from price
+                        if (!isNaN(price)) {
+                            if (price < 10) {
+                                priceRanges['Under $10']++;
+                            } else if (price >= 10 && price < 50) {
+                                priceRanges['$10 - $50']++;
+                            } else if (price >= 50 && price < 100) {
+                                priceRanges['$50 - $100']++;
+                            } else if (price >= 100 && price < 500) {
+                                priceRanges['$100 - $500']++;
+                            } else {
+                                priceRanges['Over $500']++;
+                            }
+                        }
+
+                        // Process discount data
+                        if (product.discount && product.discount > 0) {
+                            const category = product.category ? product.category : 'Unknown';
+                            discountData[category] = (discountData[category] || 0) + 1;
+                        }
+
+                        // Process popularity data
+                        if (product.views) {
+                            const productName = product.name ? product.name : 'Unnamed Product';
+                            popularityData[productName] = product.views;
+                        }
+                    });
+                }
+            });
+
+            // Create the category pie chart
+            const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+            new Chart(ctxCategory, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(categoryCount),
+                    datasets: [{
+                        label: 'Products per Category',
+                        data: Object.values(categoryCount),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
+                }
+            });
+
+            // Create the price range bar chart
+            const ctxPriceRange = document.getElementById('priceRangeChart').getContext('2d');
+            new Chart(ctxPriceRange, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(priceRanges),
+                    datasets: [{
+                        label: 'Products per Price Range',
+                        data: Object.values(priceRanges),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Create the discount line chart
+            const ctxDiscount = document.getElementById('discountChart').getContext('2d');
+            new Chart(ctxDiscount, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(discountData),
+                    datasets: [{
+                        label: 'Products with Discounts',
+                        data: Object.values(discountData),
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        fill: true,
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Create the popularity trend scatter chart
+            const popularityDataset = Object.entries(popularityData).map(([productName, views]) => ({
+                x: productName,
+                y: views
+            }));
+
+            const ctxPopularity = document.getElementById('popularityChart').getContext('2d');
+            new Chart(ctxPopularity, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Popularity (Views)',
+                        data: popularityDataset,
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        pointRadius: 5,
+                        showLine: true, // Use lines to connect points
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Views'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Products'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

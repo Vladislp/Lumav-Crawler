@@ -8,11 +8,15 @@ class Crawler
 {
     private $client;
 
+    // Constructor method to initialize the HTTP client
     public function __construct()
     {
+        // Create a new Guzzle client with a 10-second timeout and custom headers
         $this->client = new Client([
-            'timeout' => 10.0,
+            // Timeout for requests (in seconds)
+            'timeout' => 10.0, 
             'headers' => [
+                // Custom User-Agent header for identification
                 'User-Agent' => 'EcommerceCrawler/1.0',
             ],
         ]);
@@ -58,16 +62,19 @@ class Crawler
 
         return $categories;
     }
-
+    // Method to extract product information from an AliExpress page
     public function extractProductsFromAliExpress(DomCrawler $crawler)
     {
+        // Select and loop through each product container using the specified CSS class
         $products = $crawler->filter('.new-user--itemWrap--23_AGec')->each(function (DomCrawler $node) {
             $link = $node->attr('href');
             $imageUrl = $node->filter('img')->attr('src');
-            $discount = $node->filter('.new-user--discount--2ptxNmf')->text();
+            $discount = $node->filter('.new-user--discount--2ptxNmf')->count() > 0 ?
+                $node->filter('.new-user--discount--2ptxNmf')->text() : 'No discount'; // Capture discount info
             $minPrice = $node->filter('.new-user--minPrice--27O2j3o')->text();
             $originPrice = $node->filter('.new-user--originPrice--2y3Jdz7')->text();
-
+    
+            // Return the extracted data as an array, with trimmed values to remove unnecessary whitespace
             return [
                 'link' => trim($link),
                 'image_url' => trim($imageUrl),
@@ -76,9 +83,10 @@ class Crawler
                 'origin_price' => trim($originPrice),
             ];
         });
-
+    
         return $products;
     }
+    
     
     public function extractCategories(DomCrawler $crawler)
     {
@@ -130,7 +138,7 @@ class Crawler
     {
         try {
             $response = $this->client->request('GET', $url, [
-                'verify' => false, // Disable SSL verification (not recommended for production)
+                'verify' => false, 
             ]);
 
             return (string) $response->getBody();
